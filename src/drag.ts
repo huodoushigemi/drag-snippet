@@ -1,45 +1,49 @@
 import { useElementBounding, useEventListener } from '@vueuse/core'
 import { VueNode } from './class/VueNode'
-import { computed, h, nextTick, reactive, render, watchEffect } from 'vue'
+import { computed, Fragment, h, nextTick, reactive, render, watchEffect } from 'vue'
 import { pick } from 'es-toolkit'
 import type { Node } from './class/Node'
 import { useDraggable } from './useDraggable'
+import './css.scss'
 
 type El = HTMLElement
 
 export function useDrag() {
   const state = reactive({
     hover: void 0 as Node | undefined,
+    active: void 0 as Node | undefined,
   })
   
   useEventListener(window, 'mouseover', e => {
     state.hover = findENode(e)
   })
 
-  const rect = reactive(useElementBounding(() => state.hover?.el))
+  useEventListener(window, 'mousedown', e => {
+    state.active = findENode(e)
+  })
 
   const el = document.createElement('div')
   el.style = 'position: fixed; top: 0; left: 0; pointer-events: none; z-index: 10000;'
   document.body.append(el)
 
   watchEffect(() => {
-    const { hover }  = state
-    const style = {
-      position: 'fixed',
-      top: `${rect.top}px`,
-      left: `${rect.left}px`,
-      width: `${rect.width}px`,
-      height: `${rect.height}px`,
-      outline: '1px red dashed',
-      outlineOffset: '-1px',
-      opacity: '.4',
-      ...hover ? pick(getComputedStyle(hover.el), ['transform', 'borderRadius']) : {}
-    }
-    render(h('div', { style }, [
-      h('div', { style: 'display: flex; height: 22px; line-height: 22px; transform: translate(0, -100%);' }, [
-        h('div', { style: 'padding: 0 6px; background: red; font-size: 12px;' }, hover?.is)
-      ])
-    ]), el)
+    const { hover, active }  = state
+    render(h('div', { class: 'xxx' }, [
+      hover && h('div', { style: { position: 'fixed', top: `${hover.rect.top}px`, left: `${hover.rect.left}px`, width: `${hover.rect.width}px`, height: `${hover.rect.height}px` } }, [
+        h('div', { class: 'hover-outline', style: hover && pick(getComputedStyle(hover.el), ['transform', 'borderRadius']) }),
+        h('div', { class: 'actions', style: 'display: flex; height: 22px; line-height: 22px; transform: translate(0, -100%);' }, [
+          h('div', { class: 'actions-title' }, hover?.label)
+        ])
+      ]),
+      active && h('div', { style: { position: 'fixed', top: `${active.rect.top}px`, left: `${active.rect.left}px`, width: `${active.rect.width}px`, height: `${active.rect.height}px` } }, [
+          h('div', { class: 'active-outline', style: active && pick(getComputedStyle(active.el), ['transform', 'borderRadius']) }),
+          h('div', { class: 'actions', style: 'display: flex; height: 22px; line-height: 22px; transform: translate(0, -100%);' }, [
+            // h('div', { class: 'actions-title' }, hover?.is)
+          ])
+        ]),
+      ]),
+      el
+    )
   })
 
   // 
@@ -63,15 +67,21 @@ export function useDrag() {
       return findNode(el) ? true : false
     },
     drop(el, drag, type, e) {
-      // update files
+      const rel = findNode(el)!
+      const params = { rel: rel.data, drag: findNode(drag!)?.data, type }
+      fetch(`/__drag-snippet`, {
+        method: 'POST',
+        headers: new Headers({ 'content-type': 'application/json' }),
+        body: JSON.stringify(params)
+      })
     },
   })
 
   // 文本元素 开启编辑模式
   watchEffect(cleaup => {
-    const node = state.hover
-    if (!node) return
-    // if (!node?.editable) return
+    const node = state.active
+    // if (!node) return
+    if (!node?.editable) return
     const { el } = node
     const addEvent = (event, cb, opt) => { el.addEventListener(event, cb, opt); cleaup(() => el.removeEventListener(event, cb)) }
     const addAttr = (k, v) => { el.setAttribute(k, v); cleaup(() => el.removeAttribute(k)) }
@@ -85,9 +95,9 @@ export function useDrag() {
       addEvent('keydown', async (e) => {
         if (e.key == 'Enter') {
           e.preventDefault()
-          state.hover = void 0
+          state.active = void 0
           await nextTick()
-          state.hover = node
+          state.active = node
           // 
         }
         e.stopPropagation()
@@ -102,9 +112,9 @@ export function useDrag() {
 
 function findENode(e: Event): Node | undefined {
   const el = e.composedPath().find(e => VueNode.match(e)) as any
-  return el ? (el.__lcd_node ??= new VueNode(el)) : void 0
+  return el ? (reactive(new VueNode(el))) : void 0
 }
 
 function findNode(el: Element): Node | undefined {
-  return VueNode.match(el) ? (el.__lcd_node ??= new VueNode(el)) : void 0
+  return VueNode.match(el) ? (reactive(new VueNode(el))) : void 0
 }

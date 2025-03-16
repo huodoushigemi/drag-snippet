@@ -1,0 +1,25 @@
+.hover-outline {
+  position: absolute;
+  inset: 0;
+  outline: 1px #007fd4 dashed;
+  outline-offset: -1px;
+  opacity: .5
+}
+
+.active-outline {
+  position: absolute;
+  inset: 0;
+  outline: 1px #007fd4 solid;
+  outline-offset: -1px;
+}
+
+.actions {
+  
+}
+
+.actions-title {
+  padding: 0 6px;
+  font-size: 12px;
+  background: #007fd4;
+  opacity: .5;
+}

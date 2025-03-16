@@ -2,12 +2,12 @@ import { Node } from './Node'
 
 export class VueNode extends Node {
   static match(el: any) {
-    return el instanceof HTMLElement && !!(el as any).lcd
+    return (el instanceof HTMLElement || (el as Element).tagName == 'svg') && !!(el as any).lcd
   }
 
-  // get lcd() {
-  //   return (this.el as any).lcd
-  // }
+  get lcd() {
+    return (this.el as any).lcd
+  }
 
   get vnode() {
     return (this.el as any).__vnode
@@ -21,9 +21,13 @@ export class VueNode extends Node {
     return this.el == this.componentRootEl ? this.vnode.ctx.type.__name : this.vnode.type
   }
 
-  get editable() {
-    return false
+  get loc() {
+    return this.lcd.loc
   }
+
+  // get editable() {
+  //   return false
+  // }
 
   get file() {
     return this.vnode.ctx.type.__file
