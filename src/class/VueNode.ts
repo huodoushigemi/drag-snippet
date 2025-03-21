@@ -17,6 +17,10 @@ export class VueNode extends Node {
     return this.vnode.ctx.ctx.$el
   }
 
+  get id() {
+    return this.lcd.id
+  }
+
   get is() {
     return this.el == this.componentRootEl ? this.vnode.ctx.type.__name : this.vnode.type
   }
@@ -25,9 +29,9 @@ export class VueNode extends Node {
     return this.lcd.loc
   }
 
-  // get editable() {
-  //   return false
-  // }
+  get editable() {
+    return this.lcd.editable
+  }
 
   get file() {
     return this.vnode.ctx.type.__file

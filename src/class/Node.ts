@@ -1,4 +1,4 @@
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, toValue, unref } from 'vue'
 import { useElementBounding } from '@vueuse/core'
 
 function _ref<T>(): T | undefined
@@ -11,12 +11,13 @@ export abstract class Node {
     el = _ref() as HTMLElement
   
     constructor(el: Element) {
-      this.el = el as HTMLElement
+      this.el.value = el as HTMLElement
     }
   
     abstract get componentRootEl(): HTMLElement
   
     abstract get is(): string
+    abstract get id(): string
     abstract get loc(): Record<string, any>
     get label() { return this.is }
   
@@ -24,7 +25,7 @@ export abstract class Node {
       return !this.el.children.length && !!this.el.textContent
     }
 
-    rect = _calc(() => reactive(useElementBounding(() => this.el)))
+    rect = _calc(() => reactive(useElementBounding(() => unref(this.el))))
   
     abstract get file(): string
 

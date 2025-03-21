@@ -1,7 +1,7 @@
-import { useElementBounding, useEventListener } from '@vueuse/core'
-import { VueNode } from './class/VueNode'
-import { computed, Fragment, h, nextTick, reactive, render, watchEffect } from 'vue'
+import { useElementBounding, useEventListener, useMutationObserver } from '@vueuse/core'
+import { computed, Fragment, h, nextTick, reactive, render, toRaw, toRef, triggerRef, watchEffect } from 'vue'
 import { pick } from 'es-toolkit'
+import { VueNode } from './class/VueNode'
 import type { Node } from './class/Node'
 import { useDraggable } from './useDraggable'
 import './css.scss'
@@ -26,6 +26,7 @@ export function useDrag() {
   el.style = 'position: fixed; top: 0; left: 0; pointer-events: none; z-index: 10000;'
   document.body.append(el)
 
+  // hover outline
   watchEffect(() => {
     const { hover, active }  = state
     render(h('div', { class: 'xxx' }, [
@@ -45,9 +46,29 @@ export function useDrag() {
       el
     )
   })
+  
+  // 监听 vite 热更新
+  import.meta.hot?.on('vite:afterUpdate', async () => {
+    if (state.active) {
+      await nextTick()
+      state.active = findNode(document.querySelector(`[lcd-id="${state.active.id}"]`))
+    }
+  })
+
+  useMutationObserver(() => document.body, (e, obs) => {
+    state.hover && triggerRef(toRaw(state.hover).el)
+    state.active && triggerRef(toRaw(state.active).el)
+    obs.takeRecords()
+  }, {
+    subtree: true,
+    childList: true,
+    attributes: false,
+  })
 
   // 
   const hoverEl = computed(() => state.hover?.el)
+
+  console.log(window.state = state);
 
   watchEffect(cleaup => {
     const hover = hoverEl.value
@@ -69,11 +90,7 @@ export function useDrag() {
     drop(el, drag, type, e) {
       const rel = findNode(el)!
       const params = { rel: rel.data, drag: findNode(drag!)?.data, type }
-      fetch(`/__drag-snippet`, {
-        method: 'POST',
-        headers: new Headers({ 'content-type': 'application/json' }),
-        body: JSON.stringify(params)
-      })
+      import.meta.hot.send('drag-snippet/move', params)
     },
   })
 
